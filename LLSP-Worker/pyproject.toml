@@ -1,0 +1,24 @@
+[project]
+name = "llsp-worker"
+version = "0.1.0"
+description = "LLSP - Celery WORKER"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "celery[amqp]==5.5.3"
+]
+
+[project.optional-dependencies]
+formatting = [
+    "ruff==0.12.9",
+    "mypy==1.17.1",
+    "llsp-worker[test]",
+]
+test = [
+    "pytest==8.4.1",
+    "pytest-cov==6.2.1",
+    "pytest-random-order==1.2.0",
+    "httpx==0.28.1",
+]
+
+all = ["llsp-worker[formatting]"]

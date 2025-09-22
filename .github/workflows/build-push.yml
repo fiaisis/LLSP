@@ -1,0 +1,55 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.WRITE_PACKAGE_TOKEN }}
+
+      - name: Build and push llsp-worker Docker image
+        id: docker_build
+        uses: docker/build-push-action@v6
+        with:
+          file: ./LSSP-Worker/Dockerfile
+          push: true
+          context: ./LSSP-Worker
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/fia-api
+
+#      - name: Checkout the Gitops repository
+#        uses: actions/checkout@v5
+#        with:
+#          repository: fiaisis/gitops
+#          token: ${{ secrets.GITOPS_STAGING_EDIT_TOKEN }}
+#
+#      - name: Edit the YAML fia-api file for staging
+#        uses: mikefarah/yq@v4.47.1
+#        with:
+#          cmd: yq e -i '.spec.template.spec.containers[] |= select(.name == "fia-api").image = "ghcr.io/fiaisis/fia-api@${{ steps.docker_build.outputs.digest }}"' './components/fia-api/envs/staging/fia-api.yml'
+#
+#      - name: Commit and push changes
+#        run: |
+#          git config --local user.email "action@github.com"
+#          git config --local user.name "GitHub Action"
+#          git commit -am "[CD] Update fia-api with this commit ${{ github.event.head_commit.url}}"
+#          git push
