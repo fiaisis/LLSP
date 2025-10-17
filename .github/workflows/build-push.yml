@@ -33,7 +33,7 @@ jobs:
         with:
           file: ./LLSP-Worker/Dockerfile
           push: true
-          context: ./LSSP-Worker
+          context: ./LLSP-Worker
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/fia-api
 
 #      - name: Checkout the Gitops repository
