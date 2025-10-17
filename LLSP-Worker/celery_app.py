@@ -6,7 +6,10 @@ from typing import Any
 
 from celery import Celery
 
-BROKER = os.getenv("CELERY_BROKER_URL")
+BROKER_URL = os.getenv("CELERY_BROKER_URL")
+RABBITMQ_USER = os.getenv("RABBITMQ_USER")
+RABBITMQ_PASS = os.getenv("RABBITMQ_PASS")
+BROKER = f"amqp://{RABBITMQ_USER}:{RABBITMQ_PASS}@{BROKER_URL}/llspvhost"
 app = Celery("celery_app", broker=BROKER)
 app.conf.update(
     worker_prefetch_multiplier=1,
