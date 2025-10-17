@@ -34,7 +34,7 @@ jobs:
           file: ./LLSP-Worker/Dockerfile
           push: true
           context: ./LLSP-Worker
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/fia-api
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/llsp-worker
 
 #      - name: Checkout the Gitops repository
 #        uses: actions/checkout@v5
@@ -42,14 +42,14 @@ jobs:
 #          repository: fiaisis/gitops
 #          token: ${{ secrets.GITOPS_STAGING_EDIT_TOKEN }}
 #
-#      - name: Edit the YAML fia-api file for staging
+#      - name: Edit the YAML llsp-worker file for staging
 #        uses: mikefarah/yq@v4.47.1
 #        with:
-#          cmd: yq e -i '.spec.template.spec.containers[] |= select(.name == "fia-api").image = "ghcr.io/fiaisis/fia-api@${{ steps.docker_build.outputs.digest }}"' './components/fia-api/envs/staging/fia-api.yml'
+#          cmd: yq e -i '.spec.template.spec.containers[] |= select(.name == "llsp-worker").image = "ghcr.io/fiaisis/llsp-worker@${{ steps.docker_build.outputs.digest }}"' './components/llsp-worker/envs/staging/llsp-worker.yml'
 #
 #      - name: Commit and push changes
 #        run: |
 #          git config --local user.email "action@github.com"
 #          git config --local user.name "GitHub Action"
-#          git commit -am "[CD] Update fia-api with this commit ${{ github.event.head_commit.url}}"
+#          git commit -am "[CD] Update llsp-worker with this commit ${{ github.event.head_commit.url}}"
 #          git push
