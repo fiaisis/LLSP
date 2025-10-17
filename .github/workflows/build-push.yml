@@ -31,7 +31,7 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v6
         with:
-          file: ./LSSP-Worker/Dockerfile
+          file: ./LLSP-Worker/Dockerfile
           push: true
           context: ./LSSP-Worker
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/fia-api
