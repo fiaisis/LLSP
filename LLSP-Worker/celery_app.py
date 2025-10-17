@@ -10,7 +10,7 @@ from celery import Celery
 
 logger = logging.getLogger(__name__)
 
-BROKER_URL = os.getenv("CELERY_BROKER_URL")
+BROKER_HOST = os.getenv("CELERY_BROKER_HOST")
 RABBITMQ_USER = os.environ.get("RABBITMQ_USER", "foo")
 RABBITMQ_PASS = os.environ.get("RABBITMQ_PASS", "bar")
 BROKER = f"amqp://{RABBITMQ_USER}:{quote(RABBITMQ_PASS)}@rabbitmq-cluster.rabbitmq.svc.cluster.local:5672/llspvhost"
