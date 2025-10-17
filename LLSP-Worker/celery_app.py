@@ -4,6 +4,7 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 from typing import Any
+from urllib.parse import quote
 
 from celery import Celery
 
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 BROKER_URL = os.getenv("CELERY_BROKER_URL")
 RABBITMQ_USER = os.environ.get("RABBITMQ_USER", "foo")
 RABBITMQ_PASS = os.environ.get("RABBITMQ_PASS", "bar")
-BROKER = f"amqp://{RABBITMQ_USER}:{RABBITMQ_PASS}@rabbitmq-cluster.rabbitmq.svc.cluster.local:5672/llspvhost"
+BROKER = f"amqp://{RABBITMQ_USER}:{quote(RABBITMQ_PASS)}@rabbitmq-cluster.rabbitmq.svc.cluster.local:5672/llspvhost"
 app = Celery("celery_app", broker=BROKER)
 app.conf.update(
     worker_prefetch_multiplier=1,
