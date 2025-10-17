@@ -7,7 +7,7 @@ from typing import Any
 from celery import Celery
 
 BROKER = os.getenv("CELERY_BROKER_URL")
-app = Celery("LLSP-Worker", broker=BROKER)
+app = Celery("celery_app", broker=BROKER)
 app.conf.update(
     worker_prefetch_multiplier=1,
     task_acks_late=True,
