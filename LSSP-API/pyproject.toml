@@ -1,0 +1,27 @@
+[project]
+name = "LSSP-api"
+version = "0.1.0"
+description = "A minimal FastAPI service that executes submitted Python scripts."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi[all]==0.116.1",
+    "uvicorn==0.35.0",
+    "pydantic==2.11.7",
+
+]
+
+[project.optional-dependencies]
+formatting = [
+    "ruff==0.12.9",
+    "mypy==1.17.1",
+    "execute-api[test]",
+]
+test = [
+    "pytest==8.4.1",
+    "pytest-cov==6.2.1",
+    "pytest-random-order==1.2.0",
+    "httpx==0.28.1",
+]
+
+all = ["execute-api[all]"]
