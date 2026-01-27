@@ -1,0 +1,33 @@
+[project]
+name = "llsp-api"
+version = "0.1.0"
+description = "LLSP - Celery WORKER"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi[all]==0.120.0",
+    "celery[amqp]==5.5.3",
+]
+
+[project.optional-dependencies]
+formatting = [
+    "ruff==0.12.9",
+    "mypy==1.17.1",
+    "llsp-api[test]",
+]
+test = [
+    "pytest==8.4.1",
+    "pytest-cov==6.2.1",
+    "pytest-random-order==1.2.0",
+    "httpx==0.28.1",
+    "requests==2.32.3",
+]
+
+all = ["llsp-api[formatting]"]
+
+[tool.setuptools]
+py-modules = ["app"]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
