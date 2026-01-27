@@ -50,6 +50,17 @@ def map_state(celery_state: str, result_body: Any) -> TaskState:
     return TaskState.error
 
 
+@app.get("/healthz")
+def healthz():
+    """Liveness probe endpoint."""
+    return {"status": "ok"}
+
+
+@app.get("/ready")
+def ready():
+    """Readiness probe endpoint."""
+    return {"status": "ready"}
+
 @app.post("/execute")
 def execute(payload: ExecIn) -> Task:
     """Submit a script for execution."""
