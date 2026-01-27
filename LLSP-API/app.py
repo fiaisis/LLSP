@@ -81,3 +81,15 @@ def status(task_id: str) -> Task:
         state=state,
         result=body,
     )
+
+
+@app.get("/healthz")
+def healthz():
+    """Liveness probe endpoint."""
+    return {"status": "ok"}
+
+
+@app.get("/ready")
+def ready():
+    """Readiness probe endpoint."""
+    return {"status": "ready"}
