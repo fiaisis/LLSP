@@ -12,7 +12,7 @@ BROKER = os.getenv("CELERY_BROKER_URL", "amqp://user:pass@rabbitmq:5672/vhost")
 TASK_NAME = os.getenv("EXEC_TASK_NAME", "celery_app.exec_script")
 
 # Celery Client
-celery = Celery(broker=BROKER, backend=BACKEND)
+celery = Celery(broker=BROKER)
 celery.conf.task_track_started = True
 
 app = FastAPI(title="Exec API")
