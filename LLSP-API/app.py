@@ -20,8 +20,6 @@ app = FastAPI(title="Exec API")
 
 class ExecIn(BaseModel):
     script: str = Field(..., description="Python script text")
-    output_uri: str | None = Field(None, description="Optional output URI or path")
-    timeout: int = Field(7200, ge=1, le=21600, description="Task timeout in seconds")
 
 
 class TaskState(str, Enum):
@@ -34,7 +32,7 @@ class Task(BaseModel):
     task_id: str
     state: TaskState
     result: Any
-    output_path: str | None
+
 
 def map_state(celery_state: str, result_body: Any) -> TaskState:
     """Translate Celery state into the public API surface."""
@@ -50,26 +48,14 @@ def map_state(celery_state: str, result_body: Any) -> TaskState:
     return TaskState.error
 
 
-@app.get("/healthz")
-def healthz():
-    """Liveness probe endpoint."""
-    return {"status": "ok"}
-
-
-@app.get("/ready")
-def ready():
-    """Readiness probe endpoint."""
-    return {"status": "ready"}
-
 @app.post("/execute")
 def execute(payload: ExecIn) -> Task:
     """Submit a script for execution."""
     async_result = celery.send_task(
         TASK_NAME,
         args=[payload.script],
-        kwargs={"output_uri": payload.output_uri, "timeout": payload.timeout},
     )
-    return Task(task_id=async_result.id, state=TaskState.pending, result=None, output_path=None)
+    return Task(task_id=async_result.id, state=TaskState.pending, result=None)
 
 
 @app.get("/status/{task_id}")
@@ -94,5 +80,4 @@ def status(task_id: str) -> Task:
         task_id=task_id,
         state=state,
         result=body,
-        output_path=output_path
     )
