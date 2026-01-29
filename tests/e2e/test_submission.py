@@ -1,3 +1,8 @@
+"""
+End-to-end tests for the LLSP submission workflow.
+
+This module tests the full lifecycle of a script submission, execution, and result retrieval.
+"""
 import requests
 import time
 import os
@@ -7,6 +12,12 @@ API_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 
 @retry(stop=stop_after_attempt(5), wait=wait_fixed(2))
 def wait_for_api():
+    """
+    Wait for the API to become responsive.
+
+    Retries up to 5 times with a 2-second delay.
+    :raises Exception: If the API is not ready after retries.
+    """
     try:
         response = requests.get(f"{API_URL}/healthz")
         response.raise_for_status()
@@ -14,6 +25,14 @@ def wait_for_api():
         raise Exception("API not ready")
 
 def test_workflow():
+    """
+    Test the full script submission and execution workflow.
+
+    Steps:
+    1. Submit a script that prints to stdout/stderr.
+    2. Poll the status endpoint until completion.
+    3. Verify the final state and output content.
+    """
     wait_for_api()
     
     # 1. Submit a script

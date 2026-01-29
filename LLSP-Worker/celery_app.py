@@ -1,3 +1,8 @@
+"""
+LLSP-Worker App Module.
+
+This module defines the Celery worker application and tasks for executing Python scripts.
+"""
 import logging
 import os
 import subprocess
@@ -25,6 +30,12 @@ app.conf.update(
 
 @app.task(max_retries=0)
 def exec_script(script: str) -> dict[str, Any]:
+    """
+    Execute a Python script in a subprocess.
+
+    :param script: The Python script code to execute.
+    :return: A dictionary containing 'exit_code', 'stdout', and 'stderr'.
+    """
     try:
         with TemporaryDirectory() as tmp:
             print("Here is where we would write to the database via api")
