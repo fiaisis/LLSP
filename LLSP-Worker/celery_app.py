@@ -3,6 +3,7 @@ LLSP-Worker App Module.
 
 This module defines the Celery worker application and tasks for executing Python scripts.
 """
+
 import logging
 import os
 import subprocess
@@ -38,8 +39,8 @@ def exec_script(script: str) -> dict[str, Any]:
     """
     try:
         with TemporaryDirectory() as tmp:
-            print("Here is where we would write to the database via api")
-            proc = subprocess.run(
+            print("Here is where we would write to the database via api")  # noqa: T201 # Will be removed in fia integration
+            proc = subprocess.run(  # noqa: PLW1510, S603
                 [sys.executable, "-c", script], cwd=tmp, capture_output=True, text=True
             )
             return {
@@ -48,4 +49,4 @@ def exec_script(script: str) -> dict[str, Any]:
                 "stderr": proc.stderr,
             }
     finally:
-        print("Here is where we would write to the databse via api")
+        print("Here is where we would write to the databse via api")  # noqa: T201 # Will be removed in fia integration
