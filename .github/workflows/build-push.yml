@@ -1,16 +1,16 @@
 name: Build and Push Docker Images
 
-on: push
-#  push:
-#    branches:
-#      - main
+on:
+  push:
+    branches:
+      - main
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -28,13 +28,22 @@ jobs:
           password: ${{ secrets.WRITE_PACKAGE_TOKEN }}
 
       - name: Build and push llsp-worker Docker image
-        id: docker_build
+        id: worker_build
         uses: docker/build-push-action@v6
         with:
           file: ./LLSP-Worker/Dockerfile
           push: true
           context: ./LLSP-Worker
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/llsp-worker
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/llsp-worker:latest
+
+      - name: Build and push llsp-api Docker image
+        id: api_build
+        uses: docker/build-push-action@v6
+        with:
+          file: ./LLSP-API/Dockerfile
+          push: true
+          context: ./LLSP-API
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/llsp-api:latest
 
       - name: Checkout the Gitops repository
         uses: actions/checkout@v5
@@ -45,37 +54,16 @@ jobs:
       - name: Edit the YAML llsp-worker file for staging
         uses: mikefarah/yq@v4.47.1
         with:
-          cmd: yq e -i '.spec.template.spec.containers[] |= select(.name == "llsp-worker").image = "ghcr.io/fiaisis/llsp-worker@${{ steps.docker_build.outputs.digest }}"' './components/llsp-worker/envs/staging/llsp-worker.yml'
+          cmd: yq e -i '.spec.template.spec.containers[] |= select(.name == "llsp-worker").image = "ghcr.io/fiaisis/llsp-worker@${{ steps.worker_build.outputs.digest }}"' './components/llsp-worker/envs/staging/llsp-worker.yml'
+
+      - name: Edit the YAML llsp-api file for staging
+        uses: mikefarah/yq@v4.47.1
+        with:
+          cmd: yq e -i '.spec.template.spec.containers[] |= select(.name == "llsp-api").image = "ghcr.io/fiaisis/llsp-api@${{ steps.api_build.outputs.digest }}"' './components/llsp-api/envs/staging/llsp-api.yml'
 
       - name: Commit and push changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git commit -am "[CD] Update llsp-worker with this commit ${{ github.event.head_commit.url}}"
+          git commit -am "[CD] Update llsp-worker and llsp-api with this commit ${{ github.event.head_commit.url}}"
           git push
-
-  build-and-push-api:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v5
-
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.WRITE_PACKAGE_TOKEN }}
-
-      - name: Build and push llsp-api Docker image
-        id: docker_build
-        uses: docker/build-push-action@v6
-        with:
-          file: ./LLSP-API/Dockerfile
-          push: true
-          context: ./LLSP-API
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/llsp-api
