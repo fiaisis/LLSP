@@ -9,7 +9,7 @@ import os
 from enum import Enum
 from typing import Any
 
-from celery import Celery, states
+from celery import Celery, states  # type: ignore
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
@@ -127,7 +127,7 @@ def status(task_id: str) -> Task:
 
 
 @app.get("/healthz")
-def healthz():
+def healthz() -> dict[str, str]:
     """
     Liveness probe endpoint.
 
@@ -137,7 +137,7 @@ def healthz():
 
 
 @app.get("/ready")
-def ready():
+def ready() -> dict[str, str]:
     """
     Readiness probe endpoint.
 
