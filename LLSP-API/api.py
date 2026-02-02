@@ -27,6 +27,7 @@ class EndpointFilter(logging.Filter):
         """Filter out log messages containing /healthz or /ready."""
         return record.getMessage().find("/healthz") == -1 and record.getMessage().find("/ready") == -1
 
+
 logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 # Celery Client
