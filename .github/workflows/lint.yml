@@ -56,4 +56,4 @@ jobs:
 
       - name: Run mypy
         run: |
-          mypy --strict LLSP-API LLSP-Worker
+          mypy --strict LLSP-API LLSP-Worker --exclude LLSP-Worker/build
