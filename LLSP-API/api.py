@@ -6,12 +6,12 @@ script submission and status tracking.
 """
 
 import os
-from enum import Enum
 from typing import Any
 
-from celery import Celery, states  # type: ignore
+from celery import Celery  # type: ignore
 from fastapi import FastAPI
-from pydantic import BaseModel, Field
+from model import ExecIn, Task, TaskState
+from utils import map_state
 
 # Configuration
 BROKER = os.getenv("CELERY_BROKER_URL", "amqp://user:pass@rabbitmq:5672/vhost")
@@ -22,66 +22,6 @@ celery = Celery(broker=BROKER)
 celery.conf.task_track_started = True
 
 app = FastAPI(title="Exec API")
-
-
-class ExecIn(BaseModel):
-    """
-    Input model for script execution.
-
-    :param script: The Python script to be executed.
-    """
-
-    script: str = Field(..., description="Python script text")
-
-
-class TaskState(str, Enum):
-    """
-    Enumeration of possible task states.
-
-    :cvar pending: Task is waiting to be processed.
-    :cvar running: Task is currently executing.
-    :cvar success: Task completed successfully (exit code 0).
-    :cvar error: Task failed or finished with non-zero exit code.
-    """
-
-    pending = "pending"
-    running = "running"
-    success = "success"
-    error = "error"
-
-
-class Task(BaseModel):
-    """
-    Model representing a task's status and result.
-
-    :param task_id: Unique identifier for the task.
-    :param state: Current state of the task.
-    :param result: Result payload (output or error details).
-    """
-
-    task_id: str
-    state: TaskState
-    result: Any
-
-
-def map_state(celery_state: str, result_body: Any) -> TaskState:
-    """
-    Translate Celery state into the public API surface.
-
-    :param celery_state: The raw state string from Celery.
-    :param result_body: The result body (if available) to check for exit codes.
-    :return: The mapped `TaskState` enum.
-    """
-    if celery_state == states.PENDING:
-        return TaskState.pending
-    if celery_state in {states.STARTED, states.RETRY, states.RECEIVED}:
-        return TaskState.running
-    if celery_state == states.SUCCESS:
-        # Treat non-zero exit codes as an error even though Celery succeeded.
-        if isinstance(result_body, dict) and result_body.get("exit_code", 0) != 0:
-            return TaskState.error
-        return TaskState.success
-    return TaskState.error
 
 
 @app.post("/execute")
