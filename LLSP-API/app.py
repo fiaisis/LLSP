@@ -4,6 +4,7 @@ LLSP-API Application Module.
 This module defines the FastAPI application for the LLSP service, handling
 script submission and status tracking.
 """
+
 import os
 from enum import Enum
 from typing import Any
@@ -14,7 +15,6 @@ from pydantic import BaseModel, Field
 
 # Configuration
 BROKER = os.getenv("CELERY_BROKER_URL", "amqp://user:pass@rabbitmq:5672/vhost")
-# BACKEND = os.getenv("CELERY_RESULT_BACKEND", "rpc://")
 TASK_NAME = os.getenv("EXEC_TASK_NAME", "celery_app.exec_script")
 
 # Celery Client
@@ -48,6 +48,7 @@ class TaskState(str, Enum):
     running = "running"
     success = "success"
     error = "error"
+
 
 class Task(BaseModel):
     """
@@ -108,19 +109,16 @@ def status(task_id: str) -> Task:
     """
     res = celery.AsyncResult(task_id)
     body: Any = None
-    output_path: str | None = None
     try:
         # If ready, we can get the result (which might be the dict returned by worker)
         # Note: propagate=False prevents raising an exception if the task failed.
         if res.ready():
             body = res.get(propagate=False)
-            if isinstance(body, dict):
-                output_path = body.get("output_path")
     except Exception as exc:
         body = {"error": str(exc)}
 
     state = map_state(res.state, body)
-    
+
     return Task(
         task_id=task_id,
         state=state,
