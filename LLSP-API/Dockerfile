@@ -10,7 +10,7 @@ RUN apt-get update \
 COPY pyproject.toml pyproject.toml
 RUN pip install .
 
-COPY app.py app.py
+COPY api.py api.py
 
 EXPOSE 8000
 CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
