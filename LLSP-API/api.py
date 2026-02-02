@@ -15,10 +15,11 @@ from utils import map_state
 
 # Configuration
 BROKER = os.getenv("CELERY_BROKER_URL", "amqp://user:pass@rabbitmq:5672/vhost")
+BACKEND = os.getenv("CELERY_RESULT_BACKEND", "rpc://")
 TASK_NAME = os.getenv("EXEC_TASK_NAME", "celery_app.exec_script")
 
 # Celery Client
-celery = Celery(broker=BROKER)
+celery = Celery(broker=BROKER, backend=BACKEND)
 celery.conf.task_track_started = True
 
 app = FastAPI(title="Exec API")

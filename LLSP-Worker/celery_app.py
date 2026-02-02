@@ -20,7 +20,8 @@ BROKER_HOST = os.getenv("CELERY_BROKER_HOST")
 RABBITMQ_USER = os.environ.get("RABBITMQ_USER", "foo")
 RABBITMQ_PASS = os.environ.get("RABBITMQ_PASS", "bar")
 BROKER = f"amqp://{RABBITMQ_USER}:{quote(RABBITMQ_PASS)}@{BROKER_HOST}/llspvhost"
-app = Celery("celery_app", broker=BROKER)
+BACKEND = os.getenv("CELERY_RESULT_BACKEND", "rpc://")
+app = Celery("celery_app", broker=BROKER, backend=BACKEND)
 app.conf.update(
     worker_prefetch_multiplier=1,
     task_acks_late=True,
