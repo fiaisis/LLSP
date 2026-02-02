@@ -12,7 +12,7 @@ from tempfile import TemporaryDirectory
 from typing import Any
 from urllib.parse import quote
 
-from celery import Celery # type: ignore
+from celery import Celery  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ app.conf.update(
 )
 
 
-@app.task(max_retries=0) # type: ignore # the source decorator is untyped
+@app.task(max_retries=0)  # type: ignore # the source decorator is untyped
 def exec_script(script: str) -> dict[str, Any]:
     """
     Execute a Python script in a subprocess.
