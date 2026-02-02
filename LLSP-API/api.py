@@ -5,6 +5,7 @@ This module defines the FastAPI application for the LLSP service, handling
 script submission and status tracking.
 """
 
+import logging
 import os
 from typing import Any
 
@@ -17,6 +18,16 @@ from utils import map_state
 BROKER = os.getenv("CELERY_BROKER_URL", "amqp://user:pass@rabbitmq:5672/vhost")
 BACKEND = os.getenv("CELERY_RESULT_BACKEND", "rpc://")
 TASK_NAME = os.getenv("EXEC_TASK_NAME", "celery_app.exec_script")
+
+
+class EndpointFilter(logging.Filter):
+    """Filter out log messages containing /healthz or /ready."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Filter out log messages containing /healthz or /ready."""
+        return record.getMessage().find("/healthz") == -1 and record.getMessage().find("/ready") == -1
+
+logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 # Celery Client
 celery = Celery(broker=BROKER, backend=BACKEND)
