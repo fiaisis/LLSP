@@ -42,13 +42,7 @@ jobs:
           pip install ./LLSP-Worker[test]
 
       - name: Run unit tests
-        run: |
-          # Pass if no tests collected, or we can add a dummy test.
-          # Using "|| true" to avoid failing if no tests found, but usually better to have one test.
-          # For now, let's assume we will add a dummy test if needed, or check if pytest can ignore no tests.
-          # pytest --exitfirst --verbose ./LLSP-Worker || true
-          # Actually, let's just make a dummy test file in the repo to be safe.
-          pytest ./LLSP-Worker/tests
+        run: pytest ./LLSP-Worker/tests
 
   e2e-tests:
     runs-on: ubuntu-latest
