@@ -4,4 +4,5 @@ WORKDIR /app
 COPY pyproject.toml pyproject.toml
 RUN pip install .
 COPY celery_app.py celery_app.py
+ENTRYPOINT []
 CMD ["celery", "-A", "celery_app.app", "worker", "--loglevel=INFO", "--concurrency=1"]
