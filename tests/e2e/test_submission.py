@@ -6,6 +6,7 @@ This module tests the full lifecycle of a script submission, execution, and resu
 
 import os
 import time
+from http import HTTPStatus
 
 import requests
 
@@ -80,9 +81,7 @@ print('Hello from stderr', file=sys.stderr)
 
 
 def test_unauthorized_access():
-    """
-    Verify that requests without a valid API key are rejected.
-    """
+    """Verify that requests without a valid API key are rejected."""
     wait_for_api()
 
     # Case 1: No Authorization header
@@ -91,7 +90,7 @@ def test_unauthorized_access():
         json={"script": "print('fail')"},
         timeout=10,
     )
-    assert response.status_code == 403, f"Expected 403, got {response.status_code}"
+    assert response.status_code == HTTPStatus.FORBIDDEN, f"Expected 403, got {response.status_code}"
 
     # Case 2: Invalid API key
     response = requests.post(
@@ -100,5 +99,5 @@ def test_unauthorized_access():
         headers={"Authorization": "Bearer invalid-token"},
         timeout=10,
     )
-    assert response.status_code == 401, f"Expected 401, got {response.status_code}"
+    assert response.status_code == HTTPStatus.UNAUTHORIZED, f"Expected 401, got {response.status_code}"
 
