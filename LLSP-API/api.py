@@ -8,12 +8,11 @@ script submission and status tracking.
 import logging
 import os
 import sys
-from typing import Any, Annotated
+from typing import Annotated, Any
 
 from celery import Celery  # type: ignore
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from model import ExecIn, Task, TaskState
 from utils import map_state
 
@@ -23,6 +22,7 @@ BACKEND = os.getenv("CELERY_RESULT_BACKEND", "rpc://")
 TASK_NAME = os.getenv("EXEC_TASK_NAME", "celery_app.exec_script")
 
 logger = logging.getLogger(__name__)
+
 
 class EndpointFilter(logging.Filter):
     """Filter out log messages containing /healthz or /ready."""
@@ -42,6 +42,7 @@ app = FastAPI(title="Exec API")
 
 security = HTTPBearer()
 
+
 def verify_api_key(credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]) -> None:
     """
     Validate the API key from the request credentials.
@@ -51,6 +52,7 @@ def verify_api_key(credentials: Annotated[HTTPAuthorizationCredentials, Depends(
     """
     if credentials.credentials != os.environ.get("LLSP_API_KEY"):
         raise HTTPException(status_code=401, detail="Invalid API key")
+
 
 @app.post("/execute")
 def execute(payload: ExecIn, credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]) -> Task:

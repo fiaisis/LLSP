@@ -100,4 +100,3 @@ def test_unauthorized_access():
         timeout=10,
     )
     assert response.status_code == HTTPStatus.UNAUTHORIZED, f"Expected 401, got {response.status_code}"
-
