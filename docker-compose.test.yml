@@ -19,6 +19,7 @@ services:
       CELERY_BROKER_URL: amqp://llsp:llsp@rabbitmq:5672/llspvhost
       CELERY_RESULT_BACKEND: rpc://
       EXEC_TASK_NAME: celery_app.exec_script
+      LLSP_API_KEY: "secret-token"
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -50,6 +51,7 @@ services:
       dockerfile: tests/Dockerfile
     environment:
       API_BASE_URL: http://api:8000
+      LLSP_API_KEY: "secret-token"
     depends_on:
       api:
         condition: service_healthy
