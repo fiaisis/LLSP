@@ -6,14 +6,15 @@ This module tests the full lifecycle of a script submission, execution, and resu
 
 import os
 import time
+from http import HTTPStatus
 
 import requests
-from tenacity import retry, stop_after_attempt, wait_fixed
 
 API_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+API_KEY = os.getenv("LLSP_API_KEY", "secret-token")
+HEADERS = {"Authorization": f"Bearer {API_KEY}"}
 
 
-@retry(stop=stop_after_attempt(5), wait=wait_fixed(2))
 def wait_for_api():
     """
     Wait for the API to become responsive.
@@ -45,7 +46,12 @@ import sys
 print('Hello from stdout')
 print('Hello from stderr', file=sys.stderr)
 """
-    response = requests.post(f"{API_URL}/execute", json={"script": script}, timeout=10)
+    response = requests.post(
+        f"{API_URL}/execute",
+        json={"script": script},
+        headers=HEADERS,
+        timeout=10,
+    )
     response.raise_for_status()
     data = response.json()
     assert "task_id" in data
@@ -53,7 +59,11 @@ print('Hello from stderr', file=sys.stderr)
 
     # 2. Poll for Status
     for _ in range(30):
-        response = requests.get(f"{API_URL}/status/{task_id}", timeout=10)
+        response = requests.get(
+            f"{API_URL}/status/{task_id}",
+            headers=HEADERS,
+            timeout=10,
+        )
         response.raise_for_status()
         state = response.json()
         if state["state"] in ["success", "error"]:
@@ -70,5 +80,23 @@ print('Hello from stderr', file=sys.stderr)
     assert "Hello from stderr" in result["stderr"]
 
 
-if __name__ == "__main__":
-    test_workflow()
+def test_unauthorized_access():
+    """Verify that requests without a valid API key are rejected."""
+    wait_for_api()
+
+    # Case 1: No Authorization header
+    response = requests.post(
+        f"{API_URL}/execute",
+        json={"script": "print('fail')"},
+        timeout=10,
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN, f"Expected 403, got {response.status_code}"
+
+    # Case 2: Invalid API key
+    response = requests.post(
+        f"{API_URL}/execute",
+        json={"script": "print('fail')"},
+        headers={"Authorization": "Bearer invalid-token"},
+        timeout=10,
+    )
+    assert response.status_code == HTTPStatus.UNAUTHORIZED, f"Expected 401, got {response.status_code}"
