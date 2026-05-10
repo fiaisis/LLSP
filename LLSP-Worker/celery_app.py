@@ -10,9 +10,10 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 from typing import Any
+import json
 from urllib.parse import quote
 
-import httpx
+import requests
 from celery import Celery, Task  # type: ignore
 
 logger = logging.getLogger(__name__)
@@ -76,20 +77,21 @@ class ReportingTask(Task):  # type: ignore
         if api_auth_token:
             headers["Authorization"] = f"Bearer {api_auth_token}"
 
-        payload = {
-            "status": status,
-            "result": retval if status == "SUCCESS" else None,
-            "traceback": str(einfo) if einfo else None,
+        payload: dict[str, Any] = {
+            "state": status,
         }
+        if status == "SUCCESS":
+            payload["outputs"] = json.dumps(retval) if retval else None
+        elif status == "FAILURE":
+            payload["status_message"] = str(retval) if retval else None
+            payload["stacktrace"] = str(einfo) if einfo else None
 
         try:
-            with httpx.Client() as client:
-                response = client.patch(url, json=payload, headers=headers, timeout=10.0)
-                response.raise_for_status()
-        except httpx.RequestError as exc:
+            response = requests.patch(url, json=payload, headers=headers, timeout=10.0)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as exc:
             logger.error(f"Failed to report task outcome to API: {exc}")
-        except httpx.HTTPStatusError as exc:
-            logger.error(f"API returned an error response: {exc.response.text}")
+
 
 
 @app.task(base=ReportingTask, max_retries=0)  # type: ignore # the source decorator is untyped
