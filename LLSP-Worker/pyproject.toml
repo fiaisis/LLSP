@@ -5,7 +5,8 @@ description = "LLSP - Celery WORKER"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "celery[amqp]==5.5.3"
+    "celery[amqp]==5.5.3",
+    "httpx==0.28.1",
 ]
 
 [project.optional-dependencies]
@@ -19,7 +20,6 @@ test = [
     "pytest-cov==6.2.1",
     "pytest-random-order==1.2.0",
     "pytest-asyncio==1.1.0",
-    "httpx==0.28.1",
 ]
 
 all = ["llsp-worker[formatting]"]

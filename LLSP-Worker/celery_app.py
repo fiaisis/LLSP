@@ -12,7 +12,8 @@ from tempfile import TemporaryDirectory
 from typing import Any
 from urllib.parse import quote
 
-from celery import Celery  # type: ignore
+import httpx
+from celery import Celery, Task  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,67 @@ app.conf.update(
     task_acks_on_failure_or_timeout=True,
     task_reject_on_worker_lost=True,
 )
+
+
+class ReportingTask(Task):  # type: ignore
+    """
+    Custom Celery Task base class for reporting task outcomes.
+
+    This class overrides the `after_return` method to serve as the single source
+    of truth for API updates. It sends a PATCH request to the configured API endpoint
+    with the task's status, result, or traceback.
+    """
+
+    def after_return(
+        self,
+        status: str,
+        retval: Any,
+        task_id: str,
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+        einfo: Any,
+    ) -> None:
+        """
+        Handler called after the task returns.
+
+        :param status: Current task state.
+        :param retval: Task return value/exception.
+        :param task_id: Unique id of the task.
+        :param args: Original arguments for the task.
+        :param kwargs: Original keyword arguments for the task.
+        :param einfo: Exception info, if any.
+        """
+        job_id = kwargs.get("job_id")
+        if job_id is None:
+            logger.warning("No job_id provided in task kwargs; skipping reporting.")
+            return
+
+        api_base_url = os.getenv("API_BASE_URL")
+        if not api_base_url:
+            logger.warning("API_BASE_URL not configured; skipping reporting.")
+            return
+
+        api_auth_token = os.getenv("API_AUTH_TOKEN", "")
+
+        url = f"{api_base_url.rstrip('/')}/job/{job_id}"
+        headers = {}
+        if api_auth_token:
+            headers["Authorization"] = f"Bearer {api_auth_token}"
+
+        payload = {
+            "status": status,
+            "result": retval if status == "SUCCESS" else None,
+            "traceback": str(einfo) if einfo else None,
+        }
+
+        try:
+            with httpx.Client() as client:
+                response = client.patch(url, json=payload, headers=headers, timeout=10.0)
+                response.raise_for_status()
+        except httpx.RequestError as exc:
+            logger.error(f"Failed to report task outcome to API: {exc}")
+        except httpx.HTTPStatusError as exc:
+            logger.error(f"API returned an error response: {exc.response.text}")
 
 
 @app.task(max_retries=0)  # type: ignore # the source decorator is untyped
