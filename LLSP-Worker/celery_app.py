@@ -92,24 +92,21 @@ class ReportingTask(Task):  # type: ignore
             logger.error(f"API returned an error response: {exc.response.text}")
 
 
-@app.task(max_retries=0)  # type: ignore # the source decorator is untyped
-def exec_script(script: str) -> dict[str, Any]:
+@app.task(base=ReportingTask, max_retries=0)  # type: ignore # the source decorator is untyped
+def exec_script(script: str, *, job_id: int) -> dict[str, Any]:
     """
     Execute a Python script in a subprocess.
 
     :param script: The Python script code to execute.
+    :param job_id: The unique identifier of the job, used for reporting.
     :return: A dictionary containing 'exit_code', 'stdout', and 'stderr'.
     """
-    try:
-        with TemporaryDirectory() as tmp:
-            print("Here is where we would write to the database via api")  # noqa: T201 # Will be removed in fia integration
-            proc = subprocess.run(  # noqa: PLW1510, S603
-                [sys.executable, "-c", script], cwd=tmp, capture_output=True, text=True
-            )
-            return {
-                "exit_code": proc.returncode,
-                "stdout": proc.stdout,
-                "stderr": proc.stderr,
-            }
-    finally:
-        print("Here is where we would write to the databse via api")  # noqa: T201 # Will be removed in fia integration
+    with TemporaryDirectory() as tmp:
+        proc = subprocess.run(  # noqa: PLW1510, S603
+            [sys.executable, "-c", script], cwd=tmp, capture_output=True, text=True
+        )
+        return {
+            "exit_code": proc.returncode,
+            "stdout": proc.stdout,
+            "stderr": proc.stderr,
+        }
