@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@v7.0.1
 
       - name: Log in to the Container registry
         uses: docker/login-action@v4
@@ -46,18 +46,18 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/llsp-api:latest
 
       - name: Checkout the Gitops repository
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@v7.0.1
         with:
           repository: fiaisis/gitops
           token: ${{ secrets.GITOPS_STAGING_EDIT_TOKEN }}
 
       - name: Edit the YAML llsp-worker file for staging
-        uses: mikefarah/yq@v4.53.2
+        uses: mikefarah/yq@v4.53.3
         with:
           cmd: yq e -i '.spec.template.spec.containers[] |= select(.name == "llsp-worker").image = "ghcr.io/fiaisis/llsp-worker@${{ steps.worker_build.outputs.digest }}"' './components/llsp-worker/envs/staging/llsp-worker.yml'
 
       - name: Edit the YAML llsp-api file for staging
-        uses: mikefarah/yq@v4.53.2
+        uses: mikefarah/yq@v4.53.3
         with:
           cmd: yq e -i '.spec.template.spec.containers[] |= select(.name == "llsp-api").image = "ghcr.io/fiaisis/llsp-api@${{ steps.api_build.outputs.digest }}"' './components/llsp-api/envs/staging/llsp-api.yml'
 
