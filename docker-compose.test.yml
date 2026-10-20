@@ -39,6 +39,8 @@ services:
       CELERY_BROKER_HOST: rabbitmq
       CELERY_RESULT_BACKEND: rpc://
       OUTPUT_DIR: /outputs
+      API_BASE_URL: http://e2e-tests:8080
+      API_AUTH_TOKEN: "fia-api-test-token"
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -52,6 +54,8 @@ services:
     environment:
       API_BASE_URL: http://api:8000
       LLSP_API_KEY: "secret-token"
+      FIA_API_AUTH_TOKEN: "fia-api-test-token"
+      CALLBACK_PORT: "8080"
     depends_on:
       api:
         condition: service_healthy
