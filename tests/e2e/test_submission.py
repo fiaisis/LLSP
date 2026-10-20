@@ -48,7 +48,7 @@ print('Hello from stderr', file=sys.stderr)
 """
     response = requests.post(
         f"{API_URL}/execute",
-        json={"script": script},
+        json={"script": script, "job_id": 1},
         headers=HEADERS,
         timeout=10,
     )
@@ -87,7 +87,7 @@ def test_unauthorized_access():
     # Case 1: No Authorization header
     response = requests.post(
         f"{API_URL}/execute",
-        json={"script": "print('fail')"},
+        json={"script": "print('fail')", "job_id": 1},
         timeout=10,
     )
     assert response.status_code == HTTPStatus.FORBIDDEN, f"Expected 403, got {response.status_code}"
@@ -95,7 +95,7 @@ def test_unauthorized_access():
     # Case 2: Invalid API key
     response = requests.post(
         f"{API_URL}/execute",
-        json={"script": "print('fail')"},
+        json={"script": "print('fail')", "job_id": 1},
         headers={"Authorization": "Bearer invalid-token"},
         timeout=10,
     )
