@@ -1,6 +1,7 @@
 """Tests for the celery_app module and custom ReportingTask."""
 
 import json
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -23,6 +24,46 @@ def test_exec_script() -> None:
     assert result["exit_code"] == 0
     assert result["stdout"] == "Hello World!\n"
     assert result["stderr"] == ""
+
+
+def test_exec_script_non_utf8_output() -> None:
+    """Test exec_script safely replaces invalid UTF-8 bytes without raising UnicodeDecodeError."""
+    script = "import sys; sys.stdout.buffer.write(b'valid\\xff\\xfeinvalid'); sys.stderr.buffer.write(b'err\\x80')"
+    result = exec_script(script, job_id=1)
+
+    assert result["exit_code"] == 0
+    assert "valid" in result["stdout"]
+    assert "\ufffd" in result["stdout"]
+    assert "\ufffd" in result["stderr"]
+    # Verify the resulting dictionary is valid JSON
+    serialized = json.dumps(result)
+    assert json.loads(serialized) == result
+
+
+def test_reporting_task_non_json_serializable_retval(mock_env: None) -> None:
+    """Test reporting task serializes non-standard objects via default=str fallback."""
+    task = ReportingTask()
+
+    with patch("requests.patch") as mock_patch:
+        mock_response = MagicMock()
+        mock_patch.return_value = mock_response
+
+        retval = {"exit_code": 0, "path": Path("/outputs/output.nxs"), "tags": {"a"}}
+        task.after_return(
+            status="SUCCESS",
+            retval=retval,
+            task_id="task-123",
+            args=(),
+            kwargs={"job_id": 42},
+            einfo=None,
+        )
+
+        mock_patch.assert_called_once()
+        sent_payload = mock_patch.call_args.kwargs["json"]
+        assert sent_payload["state"] == "SUCCESSFUL"
+        parsed_outputs = json.loads(sent_payload["outputs"])
+        assert parsed_outputs["path"] == "/outputs/output.nxs"
+        assert parsed_outputs["tags"] == "{'a'}"
 
 
 def test_reporting_task_success(mock_env: None) -> None:

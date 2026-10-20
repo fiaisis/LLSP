@@ -81,12 +81,12 @@ class ReportingTask(Task):  # type: ignore
         if status == "SUCCESS":
             if isinstance(retval, dict) and retval.get("exit_code", 0) != 0:
                 payload["state"] = "UNSUCCESSFUL"
-                payload["outputs"] = json.dumps(retval)
+                payload["outputs"] = json.dumps(retval, default=str)
                 payload["status_message"] = f"Script exited with code {retval.get('exit_code')}"
                 payload["stacktrace"] = retval.get("stderr") or None
             else:
                 payload["state"] = "SUCCESSFUL"
-                payload["outputs"] = json.dumps(retval) if retval else None
+                payload["outputs"] = json.dumps(retval, default=str) if retval else None
         else:
             payload["state"] = "ERROR"
             payload["status_message"] = str(retval) if retval else None
@@ -110,7 +110,11 @@ def exec_script(script: str, *, job_id: int) -> dict[str, Any]:
     """
     with TemporaryDirectory() as tmp:
         proc = subprocess.run(  # noqa: PLW1510, S603
-            [sys.executable, "-c", script], cwd=tmp, capture_output=True, text=True
+            [sys.executable, "-c", script],
+            cwd=tmp,
+            capture_output=True,
+            text=True,
+            errors="replace",
         )
         return {
             "exit_code": proc.returncode,
