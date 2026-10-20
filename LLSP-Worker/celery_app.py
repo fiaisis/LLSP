@@ -4,16 +4,16 @@ LLSP-Worker App Module.
 This module defines the Celery worker application and tasks for executing Python scripts.
 """
 
+import json
 import logging
 import os
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
 from typing import Any
-import json
 from urllib.parse import quote
 
-import requests
+import requests  # type: ignore[import-untyped]
 from celery import Celery, Task  # type: ignore
 
 logger = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ class ReportingTask(Task):  # type: ignore
         einfo: Any,
     ) -> None:
         """
-        Handler called after the task returns.
+        Handle task completion by reporting outcomes to the API.
 
         :param status: Current task state.
         :param retval: Task return value/exception.
@@ -77,21 +77,26 @@ class ReportingTask(Task):  # type: ignore
         if api_auth_token:
             headers["Authorization"] = f"Bearer {api_auth_token}"
 
-        payload: dict[str, Any] = {
-            "state": status,
-        }
+        payload: dict[str, Any] = {}
         if status == "SUCCESS":
-            payload["outputs"] = json.dumps(retval) if retval else None
-        elif status == "FAILURE":
+            if isinstance(retval, dict) and retval.get("exit_code", 0) != 0:
+                payload["state"] = "UNSUCCESSFUL"
+                payload["outputs"] = json.dumps(retval)
+                payload["status_message"] = f"Script exited with code {retval.get('exit_code')}"
+                payload["stacktrace"] = retval.get("stderr") or None
+            else:
+                payload["state"] = "SUCCESSFUL"
+                payload["outputs"] = json.dumps(retval) if retval else None
+        else:
+            payload["state"] = "ERROR"
             payload["status_message"] = str(retval) if retval else None
             payload["stacktrace"] = str(einfo) if einfo else None
 
         try:
             response = requests.patch(url, json=payload, headers=headers, timeout=10.0)
             response.raise_for_status()
-        except requests.exceptions.RequestException as exc:
-            logger.error(f"Failed to report task outcome to API: {exc}")
-
+        except requests.exceptions.RequestException:
+            logger.exception("Failed to report task outcome to API")
 
 
 @app.task(base=ReportingTask, max_retries=0)  # type: ignore # the source decorator is untyped
