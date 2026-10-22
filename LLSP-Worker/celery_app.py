@@ -9,6 +9,7 @@ import logging
 import os
 import subprocess
 import sys
+from datetime import UTC, datetime
 from tempfile import TemporaryDirectory
 from typing import Any
 from urllib.parse import quote
@@ -41,6 +42,25 @@ class ReportingTask(Task):  # type: ignore
     with the task's status, result, or traceback.
     """
 
+    _start_times: dict[str, str]
+
+    def before_start(
+        self,
+        task_id: str,
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+    ) -> None:
+        """
+        Record the UTC start timestamp before task execution begins.
+
+        :param task_id: Unique id of the task.
+        :param args: Original arguments for the task.
+        :param kwargs: Original keyword arguments for the task.
+        """
+        if not hasattr(self, "_start_times"):
+            self._start_times = {}
+        self._start_times[task_id] = datetime.now(UTC).isoformat()
+
     def after_return(
         self,
         status: str,
@@ -60,6 +80,9 @@ class ReportingTask(Task):  # type: ignore
         :param kwargs: Original keyword arguments for the task.
         :param einfo: Exception info, if any.
         """
+        end_time = datetime.now(UTC).isoformat()
+        start_time = getattr(self, "_start_times", {}).pop(task_id, None) or end_time
+
         job_id = kwargs.get("job_id")
         if job_id is None:
             logger.warning("No job_id provided in task kwargs; skipping reporting.")
@@ -77,7 +100,10 @@ class ReportingTask(Task):  # type: ignore
         if api_auth_token:
             headers["Authorization"] = f"Bearer {api_auth_token}"
 
-        payload: dict[str, Any] = {}
+        payload: dict[str, Any] = {
+            "start": start_time,
+            "end": end_time,
+        }
         if status == "SUCCESS":
             if isinstance(retval, dict) and retval.get("exit_code", 0) != 0:
                 payload["state"] = "UNSUCCESSFUL"

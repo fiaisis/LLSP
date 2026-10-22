@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 import requests  # type: ignore[import-untyped]
@@ -67,7 +67,7 @@ def test_reporting_task_non_json_serializable_retval(mock_env: None) -> None:
 
 
 def test_reporting_task_success(mock_env: None) -> None:
-    """Test reporting task sends correct payload on success."""
+    """Test reporting task sends correct payload on success, including start and end timestamps."""
     task = ReportingTask()
 
     with patch("requests.patch") as mock_patch:
@@ -76,6 +76,7 @@ def test_reporting_task_success(mock_env: None) -> None:
         mock_patch.return_value = mock_response
 
         retval = {"exit_code": 0, "stdout": "ok", "stderr": ""}
+        task.before_start(task_id="task-123", args=(), kwargs={"job_id": 42})
         task.after_return(
             status="SUCCESS",
             retval=retval,
@@ -90,10 +91,16 @@ def test_reporting_task_success(mock_env: None) -> None:
             json={
                 "state": "SUCCESSFUL",
                 "outputs": json.dumps(retval),
+                "start": ANY,
+                "end": ANY,
             },
             headers={"Authorization": "Bearer fake-token"},
             timeout=10.0,
         )
+        sent_payload = mock_patch.call_args.kwargs["json"]
+        assert isinstance(sent_payload["start"], str)
+        assert isinstance(sent_payload["end"], str)
+        assert sent_payload["start"] <= sent_payload["end"]
         mock_response.raise_for_status.assert_called_once()
 
 
@@ -106,6 +113,7 @@ def test_reporting_task_nonzero_exit_code(mock_env: None) -> None:
         mock_patch.return_value = mock_response
 
         retval = {"exit_code": 1, "stdout": "", "stderr": "NameError: name 'x' is not defined\n"}
+        task.before_start(task_id="task-123", args=(), kwargs={"job_id": 42})
         task.after_return(
             status="SUCCESS",
             retval=retval,
@@ -122,10 +130,15 @@ def test_reporting_task_nonzero_exit_code(mock_env: None) -> None:
                 "outputs": json.dumps(retval),
                 "status_message": "Script exited with code 1",
                 "stacktrace": "NameError: name 'x' is not defined\n",
+                "start": ANY,
+                "end": ANY,
             },
             headers={"Authorization": "Bearer fake-token"},
             timeout=10.0,
         )
+        sent_payload = mock_patch.call_args.kwargs["json"]
+        assert isinstance(sent_payload["start"], str)
+        assert isinstance(sent_payload["end"], str)
         mock_response.raise_for_status.assert_called_once()
 
 
@@ -153,10 +166,15 @@ def test_reporting_task_failure(mock_env: None) -> None:
                 "state": "ERROR",
                 "status_message": str(error),
                 "stacktrace": "Traceback here...",
+                "start": ANY,
+                "end": ANY,
             },
             headers={"Authorization": "Bearer fake-token"},
             timeout=10.0,
         )
+        sent_payload = mock_patch.call_args.kwargs["json"]
+        assert isinstance(sent_payload["start"], str)
+        assert isinstance(sent_payload["end"], str)
 
 
 def test_reporting_task_missing_job_id(caplog: pytest.LogCaptureFixture) -> None:
