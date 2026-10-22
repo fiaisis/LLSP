@@ -137,6 +137,8 @@ print('Hello from stderr', file=sys.stderr)
     assert "Hello from stderr" in result["stderr"]
 
     # 4. Validation of Worker Callback to fia-api
+    # Celery marks the task as SUCCESS in the result backend before running `after_return`,
+    # so we poll briefly here to avoid a race condition while the HTTP PATCH is in flight.
     callback_path = f"/job/{job_id}"
     for _ in range(10):
         if callback_path in received_callbacks:
