@@ -4,15 +4,18 @@ LLSP-Worker App Module.
 This module defines the Celery worker application and tasks for executing Python scripts.
 """
 
+import json
 import logging
 import os
 import subprocess
 import sys
+from datetime import UTC, datetime
 from tempfile import TemporaryDirectory
 from typing import Any
 from urllib.parse import quote
 
-from celery import Celery  # type: ignore
+import requests  # type: ignore[import-untyped]
+from celery import Celery, Task  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -30,24 +33,117 @@ app.conf.update(
 )
 
 
-@app.task(max_retries=0)  # type: ignore # the source decorator is untyped
-def exec_script(script: str) -> dict[str, Any]:
+class ReportingTask(Task):  # type: ignore
+    """
+    Custom Celery Task base class for reporting task outcomes.
+
+    This class overrides the `after_return` method to serve as the single source
+    of truth for API updates. It sends a PATCH request to the configured API endpoint
+    with the task's status, result, or traceback.
+    """
+
+    _start_times: dict[str, str]
+
+    def before_start(
+        self,
+        task_id: str,
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+    ) -> None:
+        """
+        Record the UTC start timestamp before task execution begins.
+
+        :param task_id: Unique id of the task.
+        :param args: Original arguments for the task.
+        :param kwargs: Original keyword arguments for the task.
+        """
+        if not hasattr(self, "_start_times"):
+            self._start_times = {}
+        self._start_times[task_id] = datetime.now(UTC).isoformat()
+
+    def after_return(
+        self,
+        status: str,
+        retval: Any,
+        task_id: str,
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+        einfo: Any,
+    ) -> None:
+        """
+        Handle task completion by reporting outcomes to the API.
+
+        :param status: Current task state.
+        :param retval: Task return value/exception.
+        :param task_id: Unique id of the task.
+        :param args: Original arguments for the task.
+        :param kwargs: Original keyword arguments for the task.
+        :param einfo: Exception info, if any.
+        """
+        end_time = datetime.now(UTC).isoformat()
+        start_time = getattr(self, "_start_times", {}).pop(task_id, None) or end_time
+
+        job_id = kwargs.get("job_id")
+        if job_id is None:
+            logger.warning("No job_id provided in task kwargs; skipping reporting.")
+            return
+
+        api_base_url = os.getenv("API_BASE_URL")
+        if not api_base_url:
+            logger.warning("API_BASE_URL not configured; skipping reporting.")
+            return
+
+        api_auth_token = os.getenv("API_AUTH_TOKEN", "")
+
+        url = f"{api_base_url.rstrip('/')}/job/{job_id}"
+        headers = {}
+        if api_auth_token:
+            headers["Authorization"] = f"Bearer {api_auth_token}"
+
+        payload: dict[str, Any] = {
+            "start": start_time,
+            "end": end_time,
+        }
+        if status == "SUCCESS":
+            if isinstance(retval, dict) and retval.get("exit_code", 0) != 0:
+                payload["state"] = "UNSUCCESSFUL"
+                payload["outputs"] = json.dumps(retval, default=str)
+                payload["status_message"] = f"Script exited with code {retval.get('exit_code')}"
+                payload["stacktrace"] = retval.get("stderr") or None
+            else:
+                payload["state"] = "SUCCESSFUL"
+                payload["outputs"] = json.dumps(retval, default=str) if retval else None
+        else:
+            payload["state"] = "ERROR"
+            payload["status_message"] = str(retval) if retval else None
+            payload["stacktrace"] = str(einfo) if einfo else None
+
+        try:
+            response = requests.patch(url, json=payload, headers=headers, timeout=10.0)
+            response.raise_for_status()
+        except requests.exceptions.RequestException:
+            logger.exception("Failed to report task outcome to API")
+
+
+@app.task(base=ReportingTask, max_retries=0)  # type: ignore # the source decorator is untyped
+def exec_script(script: str, *, job_id: int) -> dict[str, Any]:
     """
     Execute a Python script in a subprocess.
 
     :param script: The Python script code to execute.
+    :param job_id: The unique identifier of the job, used for reporting.
     :return: A dictionary containing 'exit_code', 'stdout', and 'stderr'.
     """
-    try:
-        with TemporaryDirectory() as tmp:
-            print("Here is where we would write to the database via api")  # noqa: T201 # Will be removed in fia integration
-            proc = subprocess.run(  # noqa: PLW1510, S603
-                [sys.executable, "-c", script], cwd=tmp, capture_output=True, text=True
-            )
-            return {
-                "exit_code": proc.returncode,
-                "stdout": proc.stdout,
-                "stderr": proc.stderr,
-            }
-    finally:
-        print("Here is where we would write to the databse via api")  # noqa: T201 # Will be removed in fia integration
+    with TemporaryDirectory() as tmp:
+        proc = subprocess.run(  # noqa: PLW1510, S603
+            [sys.executable, "-c", script],
+            cwd=tmp,
+            capture_output=True,
+            text=True,
+            errors="replace",
+        )
+        return {
+            "exit_code": proc.returncode,
+            "stdout": proc.stdout,
+            "stderr": proc.stderr,
+        }

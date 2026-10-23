@@ -66,6 +66,7 @@ def execute(payload: ExecIn, credentials: Annotated[HTTPAuthorizationCredentials
     async_result = celery.send_task(
         TASK_NAME,
         args=[payload.script],
+        kwargs={"job_id": payload.job_id},
     )
     return Task(task_id=async_result.id, state=TaskState.pending, result=None)
 

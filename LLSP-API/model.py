@@ -11,9 +11,11 @@ class ExecIn(BaseModel):
     Input model for script execution.
 
     :param script: The Python script to be executed.
+    :param job_id: The unique identifier of the job, used for reporting.
     """
 
     script: str = Field(..., description="Python script text")
+    job_id: int = Field(..., description="Job ID for callback reporting")
 
 
 class TaskState(str, Enum):
