@@ -1,5 +1,5 @@
 
-FROM ghcr.io/fiaisis/mantid:6.16.1
+FROM ghcr.io/fiaisis/mantid:7.0.0
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 COPY pyproject.toml pyproject.toml
